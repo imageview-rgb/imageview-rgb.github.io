@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图片展示系统</title>
+<style>
+*{box-sizing:border-box}
+:root{
+  --blue:#2563eb;
+  --blue-light:#eff6ff;
+  --text:#20242b;
+  --muted:#737b87;
+  --line:#e5e7eb;
+  --panel:#f8fafc;
+  --shadow:0 18px 45px rgba(15,23,42,.14);
+}
+html,body{margin:0;height:100%;font-family:"Noto Sans SC","Microsoft YaHei",sans-serif;color:var(--text);background:#fff}
+button{font:inherit}
+.app{height:100vh;display:flex;overflow:hidden}
+
+/* 左侧分类 frame */
+.sidebar{
+  width:270px;min-width:270px;background:linear-gradient(180deg,#f8fafc,#f1f5f9);
+  border-right:1px solid var(--line);display:flex;flex-direction:column;
+}
+.logo{height:82px;display:flex;align-items:center;padding:0 25px;border-bottom:1px solid var(--line)}
+.logo-icon{
+  width:38px;height:38px;border:2px solid var(--blue);border-radius:7px;
+  display:grid;place-items:center;color:var(--blue);font-size:22px;margin-right:12px
+}
+.logo-title{font-size:18px;font-weight:700}.logo-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.side-title{padding:25px 28px 14px;font-size:16px;font-weight:700}
+.category{padding:0 0 10px}
+.category-item{
+  height:64px;padding:0 28px;display:flex;align-items:center;gap:15px;
+  border-left:3px solid transparent;cursor:pointer;transition:.25s;
+}
+.category-item:hover{background:#fff}
+.category-item.active{background:#e8f1ff;color:var(--blue);border-left-color:var(--blue)}
+.category-icon{width:24px;text-align:center;font-size:20px}
+.category-name{flex:1;font-size:15px}
+.arrow{font-size:20px;color:#8b929c}
+.sidebar-footer{margin-top:auto;padding:18px 28px;color:#9299a4;font-size:12px;border-top:1px solid var(--line)}
+
+/* 右侧 frame */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;background:#fff}
+.topbar{height:82px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 34px}
+.page-title{font-size:19px;font-weight:700}.breadcrumb{font-size:13px;color:var(--muted);margin-top:4px}
+.toolbar{display:flex;gap:10px}
+.tool-btn{
+  width:38px;height:38px;border:0;background:transparent;border-radius:50%;cursor:pointer;
+  font-size:19px;color:#525a65
+}
+.tool-btn:hover{background:#f1f5f9}
+
+.content{flex:1;overflow:auto;padding:32px 38px 45px}
+.view{display:none;animation:fade .35s ease}.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.section-head{display:flex;align-items:end;justify-content:space-between;margin-bottom:22px}
+.section-head h2{font-size:22px;margin:0}.section-head p{margin:7px 0 0;color:var(--muted);font-size:13px}
+
+/* 层叠季节卡片 */
+.season-stack{
+  min-height:430px;position:relative;display:flex;align-items:center;
+  padding:0 5px 35px;margin-bottom:35px;
+}
+.season-card{
+  position:relative;width:310px;height:360px;border-radius:18px;overflow:hidden;
+  border:1px solid rgba(255,255,255,.8);box-shadow:var(--shadow);
+  cursor:pointer;transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s,z-index .1s;
+  flex-shrink:0;margin-left:-28px;
+}
+.season-card:first-child{margin-left:0}
+.season-card img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s}
+.season-card::after{
+  content:"";position:absolute;inset:35% 0 0;
+  background:linear-gradient(transparent,rgba(0,0,0,.72));
+}
+.season-card:hover{
+  transform:translateY(-22px) rotate(0deg) scale(1.035);
+  box-shadow:0 28px 55px rgba(15,23,42,.24);z-index:20;
+}
+.season-card:hover img{transform:scale(1.07)}
+.season-card:nth-child(1){transform:rotate(-1.5deg);z-index:4}
+.season-card:nth-child(2){transform:rotate(1deg);z-index:3}
+.season-card:nth-child(3){transform:rotate(-1deg);z-index:2}
+.season-card:nth-child(4){transform:rotate(1.5deg);z-index:1}
+.season-card:hover{transform:translateY(-22px) rotate(0) scale(1.035)}
+.season-info{position:absolute;z-index:3;left:22px;right:18px;bottom:19px;color:#fff}
+.season-info h3{font-size:24px;margin:0 0 6px}.season-info span{font-size:13px;opacity:.9}
+
+.tip{
+  padding:13px 16px;border-radius:10px;background:var(--blue-light);color:#49617f;
+  font-size:13px;border:1px solid #dbeafe
+}
+
+/* 图片网格 */
+.back-btn{
+  border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 15px;
+  cursor:pointer;color:#4b5563
+}
+.back-btn:hover{background:#f8fafc}
+.gallery-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:18px;
+}
+.photo-card{
+  overflow:hidden;border-radius:12px;background:#fff;border:1px solid var(--line);
+  cursor:pointer;box-shadow:0 3px 12px rgba(15,23,42,.05);
+  transition:transform .25s,box-shadow .25s;
+}
+.photo-card:hover{transform:translateY(-7px);box-shadow:0 14px 30px rgba(15,23,42,.14)}
+.photo-card img{width:100%;height:155px;object-fit:cover;display:block}
+.photo-caption{padding:11px 13px;font-size:13px;font-weight:600}
+.photo-caption small{display:block;color:var(--muted);font-weight:400;margin-top:4px}
+
+/* 大图详情 */
+.detail-wrap{max-width:1100px;margin:0 auto}
+.detail-image{
+  width:100%;height:min(65vh,650px);object-fit:contain;background:#f1f5f9;border-radius:16px;
+  display:block;
+}
+.detail-title{font-size:25px;margin:25px 0 9px}
+.detail-text{color:#68717d;line-height:1.9;font-size:15px;max-width:850px}
+.detail-meta{font-size:12px;color:#9aa1aa;margin-top:14px}
+
+/* 搜索 */
+.search-box{display:none;position:absolute;right:30px;top:58px;background:#fff;padding:12px;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);z-index:100}
+.search-box input{width:260px;border:1px solid var(--line);border-radius:7px;padding:9px 11px;outline:none}
+.search-box input:focus{border-color:#93c5fd}
+
+@media(max-width:900px){
+  .sidebar{width:210px;min-width:210px}.season-card{width:260px;height:330px}
+  .content{padding:25px}.topbar{padding:0 25px}
+}
+@media(max-width:680px){
+  .sidebar{width:70px;min-width:70px}.logo{padding:0 15px}.logo-title,.logo-sub,.side-title,.category-name,.arrow,.sidebar-footer{display:none}
+  .category-item{padding:0;justify-content:center}.category-icon{font-size:22px}
+  .content{padding:20px 15px}.season-stack{overflow-x:auto;align-items:flex-end;padding:30px 30px 45px}
+  .season-card{width:245px;margin-left:-45px}.season-card:first-child{margin-left:0}
+  .gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.photo-card img{height:130px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">▧</div>
+      <div><div class="logo-title">美丽的自然</div><div class="logo-sub">图片展示系统</div></div>
+    </div>
+    <div class="side-title">图片分类</div>
+    <nav class="category">
+      <div class="category-item active" data-category="season">
+        <span class="category-icon">✿</span><span class="category-name">按季节</span><span class="arrow">›</span>
+      </div>
+      <div class="category-item" data-category="type">
+        <span class="category-icon">♣</span><span class="category-name">按种类</span><span class="arrow">›</span>
+      </div>
+      <div class="category-item" data-category="theme">
+        <span class="category-icon">◉</span><span class="category-name">按主题</span><span class="arrow">›</span>
+      </div>
+      <div class="category-item" data-category="place">
+        <span class="category-icon">⌖</span><span class="category-name">按地区</span><span class="arrow">›</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">© 2026 图片展示系统</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <div class="page-title" id="pageTitle">按季节</div>
+        <div class="breadcrumb" id="breadcrumb">图片分类 / 按季节</div>
+      </div>
+      <div class="toolbar">
+        <button class="tool-btn" id="searchBtn" title="搜索">⌕</button>
+        <button class="tool-btn" title="关于">ⓘ</button>
+      </div>
+      <div class="search-box" id="searchBox">
+        <input id="searchInput" placeholder="搜索图片名称..." />
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- 首页 -->
+      <section class="view active" id="seasonView">
+        <div class="section-head">
+          <div><h2>按季节</h2><p>选择一个季节，浏览该分类下的全部图片</p></div>
+        </div>
+        <div class="season-stack" id="seasonStack"></div>
+        <div class="tip">提示：将鼠标移动到缩略图上，可以看到卡片浮起动画；点击卡片进入该季节的图片列表。</div>
+      </section>
+
+      <!-- 图片列表 -->
+      <section class="view" id="galleryView">
+        <div class="section-head">
+          <div><h2 id="galleryTitle">春天 - 所有图片</h2><p id="galleryDesc">这一季节的精选图片</p></div>
+          <button class="back-btn" id="backToSeason">← 返回季节选择</button>
+        </div>
+        <div class="gallery-grid" id="galleryGrid"></div>
+      </section>
+
+      <!-- 图片详情 -->
+      <section class="view" id="detailView">
+        <div class="detail-wrap">
+          <button class="back-btn" id="backToGallery">← 返回图片列表</button>
+          <div style="height:18px"></div>
+          <img class="detail-image" id="detailImage" alt="">
+          <h2 class="detail-title" id="detailTitle"></h2>
+          <div class="detail-text" id="detailText"></div>
+          <div class="detail-meta" id="detailMeta"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+const data = {
+  春天: {
+    desc:"万物复苏，生机盎然",
+    cover:"https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=900&q=85",
+    photos:[
+      ["樱花河畔","春日的樱花盛开在清澈的河流两旁。","https://images.unsplash.com/photo-1522383225653-ed111181a951?auto=format&fit=crop&w=900&q=85"],
+      ["金色花田","春风吹过，大片花田在阳光下轻轻摇曳。","https://images.unsplash.com/photo-1497250681960-ef046c08a56e?auto=format&fit=crop&w=900&q=85"],
+      ["粉色郁金香","盛开的郁金香带来明亮而柔和的春日色彩。","https://images.unsplash.com/photo-1520763185298-1b434c919102?auto=format&fit=crop&w=900&q=85"],
+      ["林间晨光","阳光穿过新叶，在草地上留下斑驳光影。","https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=900&q=85"],
+      ["枝头小鸟","一只小鸟停在盛开的花枝上，享受春日暖阳。","https://images.unsplash.com/photo-1444464666168-49d633b86797?auto=format&fit=crop&w=900&q=85"],
+      ["湖畔春色","远山、湖水与花海构成宁静的春日画面。","https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=900&q=85"],
+      ["新生嫩芽","刚刚破土而出的嫩芽，充满生命力。","https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=900&q=85"],
+      ["春日雏菊","小小的雏菊在阳光下铺满草地。","https://images.unsplash.com/photo-1495231916356-a86217efff12?auto=format&fit=crop&w=900&q=85"],
+      ["蝴蝶与花","蝴蝶停留在花瓣上，构成一幅轻盈的春日图景。","https://images.unsplash.com/photo-1452570053594-1b985d6ea890?auto=format&fit=crop&w=900&q=85"],
+      ["野花草甸","春季野花盛放，色彩自然而丰富。","https://images.unsplash.com/photo-1495231916356-a86217efff12?auto=format&fit=crop&w=900&q=85"]
+    ]
+  },
+  夏天: {
+    desc:"热情似火，活力四射",
+    cover:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=85",
+    photos:[
+      ["海边夏日","湛蓝海水与洁白沙滩构成清凉的夏日风景。","https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=85"],
+      ["椰林海岸","海风穿过椰林，阳光洒在热带海岸。","https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=900&q=85"],
+      ["夏日天空","盛夏的云朵在蓝天中留下柔软的层次。","https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=900&q=85"],
+      ["湖边清晨","夏日清晨的湖面平静而明亮。","https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=900&q=85"],
+      ["森林溪流","清澈溪水穿过葱郁森林，为夏日带来凉意。","https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=900&q=85"],
+      ["山野夏色","群山与绿色草坡展现盛夏的旺盛生命力。","https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=900&q=85"]
+    ]
+  },
+  秋天: {
+    desc:"层林尽染，硕果累累",
+    cover:"https://images.unsplash.com/photo-1507371341162-763b5e419408?auto=format&fit=crop&w=900&q=85",
+    photos:[
+      ["金色森林","秋叶染成金黄，铺满林间小路。","https://images.unsplash.com/photo-1507371341162-763b5e419408?auto=format&fit=crop&w=900&q=85"],
+      ["秋日公园","温暖阳光穿过秋叶，洒在静谧的公园里。","https://images.unsplash.com/photo-1473445361085-b9a07f55608b?auto=format&fit=crop&w=900&q=85"],
+      ["红叶山谷","红色与橙色交织成壮丽的秋季山谷。","https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=900&q=85"],
+      ["秋日湖泊","宁静湖面倒映着五彩斑斓的山林。","https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=900&q=85"],
+      ["林间小径","落叶铺成一条通向森林深处的小径。","https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=900&q=85"],
+      ["秋日山野","远山和金色草坡呈现出开阔的秋季景观。","https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=900&q=85"]
+    ]
+  },
+  冬天: {
+    desc:"银装素裹，宁静致远",
+    cover:"https://images.unsplash.com/photo-1453306458620-5bbef13a5bca?auto=format&fit=crop&w=900&q=85",
+    photos:[
+      ["雪山森林","白雪覆盖山林，远处的雪山格外宁静。","https://images.unsplash.com/photo-1453306458620-5bbef13a5bca?auto=format&fit=crop&w=900&q=85"],
+      ["雪中松林","洁白积雪覆盖枝头，森林安静而纯净。","https://images.unsplash.com/photo-1483664852095-d6cc6870702d?auto=format&fit=crop&w=900&q=85"],
+      ["冬日湖泊","冬季湖面与远山共同构成冷峻的画面。","https://images.unsplash.com/photo-1486911278844-a81c5267e227?auto=format&fit=crop&w=900&q=85"],
+      ["雪地小径","一条小径穿过白雪覆盖的森林。","https://images.unsplash.com/photo-1457269449834-928af64c684d?auto=format&fit=crop&w=900&q=85"],
+      ["雪中村庄","冬日村庄被白雪包围，显得格外温暖宁静。","https://images.unsplash.com/photo-1517299321609-52687d1bc55a?auto=format&fit=crop&w=900&q=85"],
+      ["冰雪世界","冰雪与山脉共同构成纯净的冬季景观。","https://images.unsplash.com/photo-1517299321609-52687d1bc55a?auto=format&fit=crop&w=900&q=85"]
+    ]
+  }
+};
+
+const seasonView=document.getElementById("seasonView");
+const galleryView=document.getElementById("galleryView");
+const detailView=document.getElementById("detailView");
+const pageTitle=document.getElementById("pageTitle");
+const breadcrumb=document.getElementById("breadcrumb");
+const seasonStack=document.getElementById("seasonStack");
+const galleryGrid=document.getElementById("galleryGrid");
+
+function showView(view,title,crumb){
+  [seasonView,galleryView,detailView].forEach(v=>v.classList.remove("active"));
+  view.classList.add("active");
+  pageTitle.textContent=title;
+  breadcrumb.textContent=crumb;
+  document.querySelector(".content").scrollTop=0;
+}
+
+function renderSeasons(){
+  seasonStack.innerHTML="";
+  Object.entries(data).forEach(([name,item])=>{
+    const card=document.createElement("div");
+    card.className="season-card";
+    card.innerHTML=`
+      <img src="${item.cover}" alt="${name}">
+      <div class="season-info"><h3>${name}</h3><span>${item.desc}</span></div>`;
+    card.addEventListener("click",()=>openGallery(name));
+    seasonStack.appendChild(card);
+  });
+}
+
+function openGallery(season){
+  const item=data[season];
+  document.getElementById("galleryTitle").textContent=`${season} - 所有图片`;
+  document.getElementById("galleryDesc").textContent=`${item.desc} · 共 ${item.photos.length} 张图片`;
+  galleryGrid.innerHTML="";
+  item.photos.forEach((photo,index)=>{
+    const card=document.createElement("article");
+    card.className="photo-card";
+    card.dataset.search=photo[0].toLowerCase();
+    card.innerHTML=`
+      <img src="${photo[2]}" alt="${photo[0]}" loading="lazy">
+      <div class="photo-caption">${photo[0]}<small>${season} · ${index+1}</small></div>`;
+    card.addEventListener("click",()=>openDetail(season,index));
+    galleryGrid.appendChild(card);
+  });
+  showView(galleryView,`${season}图片`,`图片分类 / 按季节 / ${season}`);
+}
+
+function openDetail(season,index){
+  const photo=data[season].photos[index];
+  document.getElementById("detailImage").src=photo[2];
+  document.getElementById("detailImage").alt=photo[0];
+  document.getElementById("detailTitle").textContent=photo[0];
+  document.getElementById("detailText").textContent=photo[1];
+  document.getElementById("detailMeta").textContent=`分类：${season}  ·  图片 ${index+1} / ${data[season].photos.length}`;
+  showView(detailView,photo[0],`图片分类 / 按季节 / ${season} / ${photo[0]}`);
+}
+
+document.querySelectorAll(".category-item").forEach(item=>{
+  item.addEventListener("click",()=>{
+    document.querySelectorAll(".category-item").forEach(x=>x.classList.remove("active"));
+    item.classList.add("active");
+    const category=item.dataset.category;
+    if(category==="season"){
+      showView(seasonView,"按季节","图片分类 / 按季节");
+    }else{
+      alert("这里已经预留了“按种类 / 按主题 / 按地区”的扩展入口。可以按同样的数据结构继续添加分类。");
+    }
+  });
+});
+
+document.getElementById("backToSeason").onclick=()=>{
+  showView(seasonView,"按季节","图片分类 / 按季节");
+};
+document.getElementById("backToGallery").onclick=()=>{
+  const season=breadcrumb.textContent.split(" / ")[2] || "春天";
+  openGallery(season);
+};
+
+const searchBox=document.getElementById("searchBox");
+document.getElementById("searchBtn").onclick=()=>{
+  searchBox.style.display=searchBox.style.display==="block"?"none":"block";
+  if(searchBox.style.display==="block")document.getElementById("searchInput").focus();
+};
+document.getElementById("searchInput").addEventListener("input",e=>{
+  const q=e.target.value.trim().toLowerCase();
+  document.querySelectorAll(".photo-card").forEach(card=>{
+    card.style.display=!q || card.dataset.search.includes(q)?"":"none";
+  });
+});
+
+renderSeasons();
+</script>
+</body>
+</html>
